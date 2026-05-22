@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>喇叭原理互動模擬</title>
+    <style>
+        body { background: #111; color: #fff; margin: 0; padding: 10px; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; }
+        .box { background: #222; border: 1px solid #444; margin: 5px; width: 100%; max-width: 500px; padding: 10px; border-radius: 8px; }
+        canvas { width: 100%; height: 150px; background: #000; display: block; margin-top: 5px; }
+        .controls { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 500px; margin-bottom: 10px; }
+        button { padding: 15px; font-size: 16px; background: #2dd4bf; border: none; border-radius: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div class="controls">
+    <button id="btn">啟動聲音系統</button>
+    <label>振幅: <input type="range" id="amp" min="0" max="1" step="0.01" value="0.5"></label>
+    <label>頻率: <input type="range" id="freq" min="20" max="1000" step="1" value="220"></label>
+</div>
+
+<div class="box">
+    波形 (Sine Wave)
+    <canvas id="waveCanvas"></canvas>
+</div>
+
+<div class="box">
+    喇叭振膜運動
+    <canvas id="speakerCanvas"></canvas>
+</div>
+
+<div class="box">
+    空氣密度擾動
+    <canvas id="airCanvas"></canvas>
+</div>
+
+<script>
+    let audioCtx, osc, gainNode;
+    const btn = document.getElementById('btn');
+    const waveCtx = document.getElementById('waveCanvas').getContext('2d');
+    const spkCtx = document.getElementById('speakerCanvas').getContext('2d');
+    const airCtx = document.getElementById('airCanvas').getContext('2d');
+
+    btn.onclick = () => {
+        if (audioCtx) return;
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        osc = audioCtx.createOscillator();
+        gainNode = audioCtx.createGain();
+        osc.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        osc.start();
+        btn.innerText = "系統運行中...";
+        btn.style.background = "#555";
+    };
+
+    function draw() {
+        const amp = parseFloat(document.getElementById('amp').value);
+        const freq = parseFloat(document.getElementById('freq').value);
+        if (osc) { osc.frequency.value = freq; gainNode.gain.value = amp; }
+
+        const t = Date.now() / 1000;
+        const val = Math.sin(t * (freq * 0.1)) * amp;
+
+        // 1. 波形
+        waveCtx.clearRect(0, 0, 500, 150);
+        waveCtx.strokeStyle = '#2dd4bf';
+        waveCtx.beginPath();
+        for(let x=0; x<500; x++) {
+            let y = 75 + Math.sin(x*0.05 + t*10) * amp * 50;
+            x === 0 ? waveCtx.moveTo(x, y) : waveCtx.lineTo(x, y);
+        }
+        waveCtx.stroke();
+
+        // 2. 喇叭剖面
+        spkCtx.clearRect(0, 0, 500, 150);
+        spkCtx.fillStyle = '#a3e635';
+        spkCtx.fillRect(200 + val*100, 40, 40, 70);
+
+        // 3. 空氣粒子
+        airCtx.clearRect(0, 0, 500, 150);
+        airCtx.fillStyle = '#fff';
+        for(let i=0; i<15; i++) {
+            let x = 50 + i*30 + Math.sin(t*10 + i)*val*80;
+            airCtx.beginPath();
+            airCtx.arc(x, 75, 4, 0, Math.PI*2);
+            airCtx.fill();
+        }
+        requestAnimationFrame(draw);
+    }
+    draw();
+</script>
+</body>
+</html>
