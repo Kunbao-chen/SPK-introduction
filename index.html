@@ -3,36 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>喇叭原理互動模擬</title>
+    <title>Acoustic Tech Simulator</title>
     <style>
-        body { background: #111; color: #fff; margin: 0; padding: 10px; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; }
-        .box { background: #222; border: 1px solid #444; margin: 5px; width: 100%; max-width: 500px; padding: 10px; border-radius: 8px; }
-        canvas { width: 100%; height: 150px; background: #000; display: block; margin-top: 5px; }
-        .controls { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 500px; margin-bottom: 10px; }
-        button { padding: 15px; font-size: 16px; background: #2dd4bf; border: none; border-radius: 5px; cursor: pointer; }
+        body { background: #0f172a; color: #f8fafc; margin: 0; padding: 15px; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; }
+        .container { width: 100%; max-width: 600px; }
+        .card { background: #1e293b; border: 1px solid #334155; padding: 15px; border-radius: 12px; margin-bottom: 15px; }
+        canvas { width: 100%; height: 120px; background: #000; border-radius: 4px; }
+        .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        button { grid-column: span 2; padding: 12px; background: #2dd4bf; color: #000; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; }
     </style>
 </head>
 <body>
 
-<div class="controls">
-    <button id="btn">啟動聲音系統</button>
-    <label>振幅: <input type="range" id="amp" min="0" max="1" step="0.01" value="0.5"></label>
-    <label>頻率: <input type="range" id="freq" min="20" max="1000" step="1" value="220"></label>
-</div>
+<div class="container">
+    <div class="controls">
+        <button id="btn">啟動聲學模擬 (Audio Engine)</button>
+        <label>振幅 (Amplitude)<input type="range" id="amp" min="0" max="1" step="0.01" value="0.5" style="width:100%"></label>
+        <label>頻率 (Hz)<input type="range" id="freq" min="20" max="2000" step="1" value="220" style="width:100%"></label>
+    </div>
 
-<div class="box">
-    波形 (Sine Wave)
-    <canvas id="waveCanvas"></canvas>
-</div>
+    <div class="card">
+        <div>即時頻率響應 (Real-time Waveform)</div>
+        <canvas id="waveCanvas"></canvas>
+    </div>
 
-<div class="box">
-    喇叭振膜運動
-    <canvas id="speakerCanvas"></canvas>
-</div>
+    <div class="card">
+        <div>振膜運動模擬 (Diaphragm Motion)</div>
+        <canvas id="speakerCanvas"></canvas>
+    </div>
 
-<div class="box">
-    空氣密度擾動
-    <canvas id="airCanvas"></canvas>
+    <div class="card">
+        <div>空氣粒子疏密 (Compression Waves)</div>
+        <canvas id="airCanvas"></canvas>
+    </div>
 </div>
 
 <script>
@@ -50,8 +53,7 @@
         osc.connect(gainNode);
         gainNode.connect(audioCtx.destination);
         osc.start();
-        btn.innerText = "系統運行中...";
-        btn.style.background = "#555";
+        btn.innerText = "模擬運行中 (Live)";
     };
 
     function draw() {
@@ -60,30 +62,28 @@
         if (osc) { osc.frequency.value = freq; gainNode.gain.value = amp; }
 
         const t = Date.now() / 1000;
-        const val = Math.sin(t * (freq * 0.1)) * amp;
+        const val = Math.sin(t * freq * 0.05) * amp;
 
-        // 1. 波形
-        waveCtx.clearRect(0, 0, 500, 150);
+        // 繪圖邏輯
+        waveCtx.clearRect(0, 0, 600, 120);
         waveCtx.strokeStyle = '#2dd4bf';
         waveCtx.beginPath();
-        for(let x=0; x<500; x++) {
-            let y = 75 + Math.sin(x*0.05 + t*10) * amp * 50;
+        for(let x=0; x<600; x++) {
+            let y = 60 + Math.sin(x * 0.05 + t * freq * 0.2) * (amp * 40);
             x === 0 ? waveCtx.moveTo(x, y) : waveCtx.lineTo(x, y);
         }
         waveCtx.stroke();
 
-        // 2. 喇叭剖面
-        spkCtx.clearRect(0, 0, 500, 150);
+        spkCtx.clearRect(0, 0, 600, 120);
         spkCtx.fillStyle = '#a3e635';
-        spkCtx.fillRect(200 + val*100, 40, 40, 70);
+        spkCtx.fillRect(280 + val*80, 40, 40, 40);
 
-        // 3. 空氣粒子
-        airCtx.clearRect(0, 0, 500, 150);
+        airCtx.clearRect(0, 0, 600, 120);
         airCtx.fillStyle = '#fff';
-        for(let i=0; i<15; i++) {
-            let x = 50 + i*30 + Math.sin(t*10 + i)*val*80;
+        for(let i=0; i<20; i++) {
+            let x = 50 + i*25 + Math.sin(t*freq*0.05 + i)*val*50;
             airCtx.beginPath();
-            airCtx.arc(x, 75, 4, 0, Math.PI*2);
+            airCtx.arc(x, 60, 3, 0, Math.PI*2);
             airCtx.fill();
         }
         requestAnimationFrame(draw);
